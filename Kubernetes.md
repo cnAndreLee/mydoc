@@ -45,6 +45,9 @@ gpgkey=https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
 exclude=kubelet kubeadm kubectl
 EOF
 
+# 使用aliyun镜像源替代google
+sed -i 's#packages.cloud.google.com#mirrors.aliyun.com/kubernetes#g' /etc/yum.repos.d/kubernetes.repo
+
 # 将 SELinux 设置为 permissive 模式（相当于将其禁用）
 sudo setenforce 0
 sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
