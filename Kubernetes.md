@@ -31,8 +31,60 @@ sudo yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin dock
 
 ### 安装Kubernetes
 Docker Engine 没有实现 CRI， 而这是容器运行时在 Kubernetes 中工作所需要的。 为此，必须安装一个额外的服务 cri-dockerd。 cri-dockerd 是一个基于传统的内置 Docker 引擎支持的项目， 它在 1.24 版本从 kubelet 中移除。
+#### 安装cri-dockerd
+```
+cd ~
+wget  wget https://ghproxy.com/https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.4/cri-dockerd-0.3.4.amd64.tgz
+tar xvf cri-dockerd-0.3.4.amd64.tgz
+mv cri-dockerd/cri-dockerd /usr/bin
 
-基于 Red Hat 的发行版
+# test
+cri-dockerd --version
+
+wget https://ghproxy.com/https://github.com/Mirantis/cri-dockerd/raw/master/packaging/systemd/cri-docker.socket
+wget https://ghproxy.com/https://github.com/Mirantis/cri-dockerd/raw/master/packaging/systemd/cri-docker.service
+mv cri-docker.socket cri-docker.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable cri-docker.service
+sudo systemctl enable --now cri-docker.socket
+```
+
+#### 转发 IPv4 并让 iptables 看到桥接流量
+```
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+
+# 设置所需的 sysctl 参数，参数在重新启动后保持不变
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+
+# 应用 sysctl 参数而不重新启动
+sudo sysctl --system
+```
+
+通过运行以下指令确认 `br_netfilter` 和 `overlay` 模块被加载：
+
+```bash
+lsmod | grep br_netfilter
+lsmod | grep overlay
+```
+通过运行以下指令确认 `net.bridge.bridge-nf-call-iptables`、`net.bridge.bridge-nf-call-ip6tables`
+和 `net.ipv4.ip_forward` 系统变量在你的 `sysctl` 配置中被设置为 1：
+
+```bash
+sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
+```
+
+
+#### 基于 Red Hat 的发行版安装
 
 ```bash
 cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
