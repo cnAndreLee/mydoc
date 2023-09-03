@@ -95,6 +95,8 @@ systemctl disable firewalld
 ### 1.5 修改hostname，并写入/etc/hosts
 注意hostname仅使用小写字母与'-', 不要使用下划线'_'
 
+### 1.6 cgroup
+
 ## 2 基于 Red Hat 的发行版安装kubeadm kubelet kubectl
 
 ```bash
@@ -156,6 +158,7 @@ kubeadm config images list
 ```
 vi pull_k8s_image.sh
 ```
+
 ```
 #!/bin/bash
 
@@ -186,10 +189,30 @@ docker rmi coredns/coredns:1.10.1
 ```
 kubeadm init \
   --apiserver-advertise-address=192.168.198.101 \
-  --cri-socket unix://var/run/cri-dockerd.sock \
+  --cri-socket unix:///var/run/cri-dockerd.sock \
   --control-plane-endpoint=cluster-endpoint \
   --kubernetes-version v1.28.1 \
   --service-cidr=10.1.0.0/16 \
   --pod-network-cidr=10.244.0.0/16 \
   --v=5
+```
+#### 有可能缺失pause:3.6, 补充后再执行kubeadm reset --cri-socket unix:///var/run/cri-dockerd.sock再执行init
+```
+docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6
+docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6 registry.k8s.io/pause:3.6
+docker rmi registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6
+```
+
+#### 
+```
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+#### (node)
+```
+kubeadm join cluster-endpoint:6443 --token 64aec8.cmw1rlpwnlxd6iuy \
+         --cri-socket unix:///var/run/cri-dockerd.sock \
+         --discovery-token-ca-cert-hash sha256:e1d05d55d8ece9c16b48047aff2f86318c05cf2f416c238965adf7304bac867c
 ```
