@@ -185,7 +185,7 @@ docker tag coredns/coredns:1.10.1 registry.k8s.io/coredns/coredns:v1.10.1
 docker rmi coredns/coredns:1.10.1
 ```
 
-### 3.2
+### 3.2 init并加入集群
 ```
 kubeadm init \
   --apiserver-advertise-address=192.168.198.101 \
@@ -203,16 +203,34 @@ docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6 registr
 docker rmi registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6
 ```
 
-#### 
+#### init成功后执行，改命令会在init时提示
 ```
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-#### (node)
+#### (node)同上
 ```
 kubeadm join cluster-endpoint:6443 --token 64aec8.cmw1rlpwnlxd6iuy \
          --cri-socket unix:///var/run/cri-dockerd.sock \
          --discovery-token-ca-cert-hash sha256:e1d05d55d8ece9c16b48047aff2f86318c05cf2f416c238965adf7304bac867c
 ```
+
+### 3.3 安装网络插件（CNI）
+
+```
+kubelet create -f https://raw.githubusercontent.com/projectcalico/calico/release-v3.26/manifests/tigera-operator.yaml
+```
+使用kubectl get pods -n tigera-operator, pod运行后下载下面文件，并修改cidr为kubeadm init指定的网段
+```
+wget https://raw.githubusercontent.com/projectcalico/calico/release-v3.26/manifests/custom-resources.yaml
+```
+
+修改完成后执行
+```
+kubectl create -f custom-resources.yaml
+```
+
+## 4 部署应用
+...
