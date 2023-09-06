@@ -196,6 +196,10 @@ kubeadm init \
   --pod-network-cidr=10.244.0.0/16 \
   --v=5
 ```
+或者通过配置文件初始化，使用以下命令生成默认配置文件
+```
+kubeadm config print init-deafaults --kubeconfig ClusterConfiguration > kubeadm.yaml
+```
 #### 有可能缺失pause:3.6, 补充后再执行kubeadm reset --cri-socket unix:///var/run/cri-dockerd.sock再执行init
 ```
 docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6
