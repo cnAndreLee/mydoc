@@ -1,0 +1,24 @@
+#!/bin/bash
+
+#过期时间   function235使用
+RETENTION_DAYS=180
+
+# function1使用    按行删除的日志文件map,key：文件名  value：过期天数
+declare -A FILES_OF_REMOVE_BY_LINE_MAP=(
+    ["/root/workspace/LogCleaner/1.log"]="60"
+)
+
+# function2使用    BACKUP目录所属用户
+BACKUP_OF_USER_LIST=("andre" "bes" "root")
+
+# function3使用    key：按日分隔日志目录，value：按日分隔日志匹配模式
+declare -A DAY_LOG_MAP=(
+    ["/home/bes/BWS/logs"]="access20*.log"
+)
+
+# function4使用    使用重定向清理的文件列表，目前仅企业数字平台使用
+CLEAN_BY_REDIRECTION_FILES=("/home/xwqyy/apps/smec-coframe-end/start.out" "/home/xwqyy/apps/smec-finance-end/finance.out" "/home/xwqyy/apps/smec-scm-end/start.out" "/home/xwqyy/apps/smec-intergrate-end/start.out" "/home/xwqyy/apps/smec-mobile-end/start.out")
+
+# function5使用    清理自身产生的日志
+SELF_LOG_FILE="/home/xwqyy/logs/log_cleaner.log"
+
