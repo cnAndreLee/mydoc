@@ -4,6 +4,9 @@ set -e
 # 设置英文环境，以免脚本执行出错
 export LANG=en_US.UTF-8
 
+StartDate=$(date +"%Y-%m-%dT%H:%M:%S%:z")
+printf "Script start at %s @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n" "$StartDate"
+
 # 载入配置
 cd $(dirname $0)
 source ./log_cleaner.rc
@@ -50,7 +53,7 @@ function function1 {
         local format3=$(date -d "$DAYS days ago" +"%Y/%m/%d")
         local format4=$(date -d "$DAYS days ago" +"%d %b %Y")
  
-        local TARGET_LINE=$(nl $FILE | grep -E "$format1|$format2|$format3|$format4" | tail -n 1 | awk '{print $1}')
+        local TARGET_LINE=$(grep -nE "$format1|$format2|$format3|$format4" $FILE | tail -n 1 | cut -d: -f1)
 
         if [ ! -z $TARGET_LINE ];then
             if [[ $yes_flag -eq 1 ]]; then
@@ -141,9 +144,9 @@ function function5 {
     printf "SELF日志清理:%s" "$SELF_LOG_FILE"
     if [ -w $SELF_LOG_FILE ];then
 
-        local format=$(date -d "$RETENTION_DAYS days ago" +"%Y%m%d")
+        local format=$(date -d "$RETENTION_DAYS days ago" +"%Y-%m-%d")
         local format_str="Script end at $format"
-        local TARGET_LINE=$(nl $SELF_LOG_FILE | grep "$format_str" | tail -n 1 | awk '{print $1}')
+        local TARGET_LINE=$(grep -n "$format_str" $SELF_LOG_FILE | tail -n 1 | cut -d: -f1)
 
         if [ ! -z $TARGET_LINE];then
             if [[ $yes_flag -eq 1 ]]; then
@@ -168,5 +171,5 @@ function4
 function5
 
 # end:  重要，SELF日志清理需要匹配该时间--------------------------------------------
-CurDate=$(date +"%Y%m%d")
-printf "Script end at %s @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n" "$CurDate"
+EndDate=$(date +"%Y-%m-%dT%H:%M:%S%:z")
+printf "Script end at %s @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n" "$EndDate"
