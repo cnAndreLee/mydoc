@@ -1,24 +1,29 @@
 #!/bin/bash
 
-#过期时间   function235使用
-RETENTION_DAYS=180
-
-# function1使用    按行删除的日志文件map,key：文件名  value：过期天数
+# function1使用  按行删除文件中超过X天的日志
+# key为不重复序号，value为按|分隔的参数
+# 参数1:文件完整路径，参数2：date日期匹配pattern 参数3:保留天数
 declare -A FILES_OF_REMOVE_BY_LINE_MAP=(
-    ["/root/workspace/LogCleaner/1.log"]="60"
+    ["1"]="/home/zhyyusr/shell/mg-release/client/logs/mg_client.log|%Y%m%d|60"
 )
 
-# function2使用    BACKUP目录所属用户
-BACKUP_OF_USER_LIST=("andre" "bes" "root")
+# function2使用  删除超过X天的日期格式的目录
+# key为不重复序号，value为按|分隔的参数
+# 参数1:目录，参数2：date日期匹配pattern 参数3:保留天数
+declare -A DATE_DIR_MAP=(
+    ["1"]="/home/zhyyusr/backup|%Y%m%d|180"
+)
 
-# function3使用    key：按日分隔日志目录，value：按日分隔日志匹配模式
+# function3使用  按日分隔日志文件清理
+# key:不重复序号，value为按|分隔的参数
+# 参数1:find目录  参数2:find name  参数3:保留天数
 declare -A DAY_LOG_MAP=(
-    ["/home/bes/BWS/logs"]="access20*.log"
+    ["1"]="/home/bes/BWS/logs|access20*.log|180"
 )
 
 # function4使用    使用重定向清理的文件列表，目前仅企业数字平台使用
-CLEAN_BY_REDIRECTION_FILES=("/home/xwqyy/apps/smec-coframe-end/start.out" "/home/xwqyy/apps/smec-finance-end/finance.out" "/home/xwqyy/apps/smec-scm-end/start.out" "/home/xwqyy/apps/smec-intergrate-end/start.out" "/home/xwqyy/apps/smec-mobile-end/start.out")
+CLEAN_BY_REDIRECTION_FILES=()
 
 # function5使用    清理自身产生的日志
-SELF_LOG_FILE="/home/xwqyy/logs/log_cleaner.log"
-
+SELF_LOG_FILE="/home/zhyyusr/logs/log_cleaner.log"
+SELF_LOG_OUT_DAYS=60

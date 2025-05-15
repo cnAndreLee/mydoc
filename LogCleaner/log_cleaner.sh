@@ -4,8 +4,11 @@ set -e
 # 设置英文环境，以免脚本执行出错
 export LANG=en_US.UTF-8
 
-StartDate=$(date +"%Y-%m-%dT%H:%M:%S%:z")
-printf "Script start at %s @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n" "$StartDate"
+function GetDate {
+    date +"%Y-%m-%dT%H:%M:%S%:z"
+}
+
+printf "Script start at %s @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n" "$(GetDate)"
 
 # 载入配置
 cd $(dirname $0)
@@ -42,18 +45,19 @@ function rm_file {
 }
 
 # function 1 --------------------------------------------------------------
-# 按行删除文件中超过RETENTION_DAYS天的日志
+# 按行删除文件中超过X天的日志，日志文件如果太大则速度很慢
 function function1 {
-    for FILE in ${!FILES_OF_REMOVE_BY_LINE_MAP[@]};do
-        local DAYS=${FILES_OF_REMOVE_BY_LINE_MAP[$FILE]}
+    printf " --------- function1 start at %s ----------- \n" "$(GetDate)"
+    for id in ${!FILES_OF_REMOVE_BY_LINE_MAP[@]};do
+        local FILE=$(echo ${FILES_OF_REMOVE_BY_LINE_MAP["$id"]} | cut -d'|' -f1)
+        local PATTERN=$(echo ${FILES_OF_REMOVE_BY_LINE_MAP["$id"]} | cut -d'|' -f2)
+        local DAYS=$(echo ${FILES_OF_REMOVE_BY_LINE_MAP["$id"]} | cut -d'|' -f3)
+
         printf "按行号清理过时日志，当前文件:%s  过期天数:%s\n" "$FILE" "$DAYS"
         # 支持匹配四种格式日期
-        local format1=$(date -d "$DAYS days ago" +"%Y%m%d")
-        local format2=$(date -d "$DAYS days ago" +"%Y-%m-%d")
-        local format3=$(date -d "$DAYS days ago" +"%Y/%m/%d")
-        local format4=$(date -d "$DAYS days ago" +"%d %b %Y")
+        local format=$(date -d "$DAYS days ago" +"$PATTERN")
  
-        local TARGET_LINE=$(grep -nE "$format1|$format2|$format3|$format4" $FILE | tail -n 1 | cut -d: -f1)
+        local TARGET_LINE=$(grep -nE "$format" $FILE | tail -n 1 | cut -d: -f1)
 
         if [ ! -z $TARGET_LINE ];then
             if [[ $yes_flag -eq 1 ]]; then
@@ -67,64 +71,71 @@ function function1 {
         fi
 
     done
+    printf " --------- function1 end at %s ----------- \n" "$(GetDate)"
 }
 # function 1 end ------------------------------------------------------------
 
 # function 2 ----------------------------------------------------------------
-# 删除超过RETENTION_DAYS天的备份目录 
+# 删除超过X天的日期格式的目录 
 function function2 {
-    for BACKUP_OF_USER in ${BACKUP_OF_USER_LIST[*]};do
-        if ! getent passwd $BACKUP_OF_USER > /dev/null 2>&1 ;then
-            printf "User not exist:%s\n" "$BACKUP_OF_USER"
-            continue
-        fi
-        local USER_HOME=$(getent passwd $BACKUP_OF_USER | cut -d: -f6)
-        printf "开始清理backup目录,当前检测路径:%s\n" "$USER_HOME"
-        if [ -d ${USER_HOME}/backup ];then
-            local TARGET_DATE=$(date -d "$RETENTION_DAYS days ago" +"%Y%m%d")
-            for dir in ${USER_HOME}/backup/*; do
-                if [ -d $dir ];then
+    printf " --------- function2 start at %s ----------- \n" "$(GetDate)"
+    for i in ${!DATE_DIR_MAP[@]};do
+        local DIR=$(echo ${DATE_DIR_MAP["$i"]} | cut -d'|' -f1)
+        local Pattern=$(echo ${DATE_DIR_MAP["$i"]} | cut -d'|' -f2)
+        local Days$(echo ${DATE_DIR_MAP["$i"]} | cut -d'|' -f3)
+        if [ -d ${DIR} ];then
+            local TARGET_DATE=$(date -d "$Days days ago" +"$Pattern")
+            for date_dir in ${DIR}/*; do
+                if [ -d $date_dir ];then
                     # 判断文件夹名是否合规
-                    if date -d "$(basename $dir)" +"%Y%m%d" > /dev/null 2>&1;then
+                    if date -d "$(basename $date_dir)" +"$Pattern" > /dev/null 2>&1;then
                         # 文件夹日期早于目标日期则删除
-                        if [[ $(echo "$(basename $dir) < $TARGET_DATE" | bc) -eq 1 ]];then
-                            rm_file $dir
+                        if [[ $(echo "$(basename $date_dir) < $TARGET_DATE" | bc) -eq 1 ]];then
+                            rm_file $date_dir
                         fi
                     else
-                        printf "无效的目录：%s\n" $dir
+                        printf "无效的目录：%s\n" $date_dir
                     fi
                 fi
             done
         else
-            printf "用户:%s backup目录不存在，跳过备份目录清理\n" "$BACKUP_OF_USER"
+            printf "目录:%s 不存在，跳过目录清理\n" "$DIR"
         fi
     done
+    
+    printf " --------- function2 end at %s ----------- \n" "$(GetDate)"
 }
 # function 2 end ------------------------------------------------------------
 
 
 # function 3 ----------------------------------------------------------------
-# 按日分隔日志目录清理
+# 按日分隔日志文件清理
 function function3 {
-    for DAY_LOG_PATH in ${!DAY_LOG_MAP[@]};do
+    printf " --------- function3 start at %s ----------- \n" "$(GetDate)"
+    for index in ${!DAY_LOG_MAP[@]};do
+        local DAY_LOG_PATH=$(echo ${DAY_LOG_MAP["$index"]} | cut -d'|' -f1)
+        local DAY_LOG_PATTERN=$(echo ${DAY_LOG_MAP["$index"]} | cut -d'|' -f2)
+        local OUT_DAY=$(echo ${DAY_LOG_MAP["$index"]} | cut -d'|' -f3)
         printf "开始清理按日分隔日志,当前检测路径:%s\n" "$DAY_LOG_PATH"
         if [ -d $DAY_LOG_PATH ];then
             if [[ $yes_flag -eq 1 ]]; then
                 printf "删除目录:%s的按日分隔过期日志\n"  "$DAY_LOG_PATH"
-                find $DAY_LOG_PATH -maxdepth 1 -type f -mtime +$RETENTION_DAYS -name "${DAY_LOG_MAP[$DAY_LOG_PATH]}" -print -delete
+                find $DAY_LOG_PATH -maxdepth 1 -type f -mtime +$OUT_DAY -name "$DAY_LOG_PATTERN" -print -delete
             else
                 printf "列出目录:%s的按日分隔过期日志\n" "$DAY_LOG_PATH"
-                find $DAY_LOG_PATH -maxdepth 1 -type f -mtime +$RETENTION_DAYS -name "${DAY_LOG_MAP[$DAY_LOG_PATH]}" 
+                find $DAY_LOG_PATH -maxdepth 1 -type f -mtime +$OUT_DAY -name "$DAY_LOG_PATTERN" 
             fi
         else
             printf "目录:%s not exist \n" "$DAY_LOG_PATH"
         fi
     done
+    printf " --------- function3 end at %s ----------- \n" "$(GetDate)"
 }
 # function 3 end ----------------------------------------------------------
 
 # function 4
 function function4 {
+    printf " --------- function4 start at %s ----------- \n" "$(GetDate)"
     for FILE in ${CLEAN_BY_REDIRECTION_FILES[@]};do 
         if [ -w $FILE ];then
             if [[ $yes_flag -eq 1 ]];then
@@ -135,16 +146,18 @@ function function4 {
             fi
         fi
     done
+    printf " --------- function4 end at %s ----------- \n" "$(GetDate)"
 }
 # function 4 end ---------------------------------------------------------
 
 # function 5
 # SELF日志清理
 function function5 {
-    printf "SELF日志清理:%s" "$SELF_LOG_FILE"
+    printf " --------- function5 start at %s ----------- \n" "$(GetDate)"
+    printf "SELF日志清理:%s \n" "$SELF_LOG_FILE"
     if [ -w $SELF_LOG_FILE ];then
 
-        local format=$(date -d "$RETENTION_DAYS days ago" +"%Y-%m-%d")
+        local format=$(date -d "$SELF_LOG_OUT_DAYS days ago" +"%Y-%m-%d")
         local format_str="Script end at $format"
         local TARGET_LINE=$(grep -n "$format_str" $SELF_LOG_FILE | tail -n 1 | cut -d: -f1)
 
@@ -161,6 +174,7 @@ function function5 {
     else
         printf "文件:%s  不存在或者无写入权限\n" "$SELF_LOG_FILE"
     fi
+    printf " --------- function5 end at %s ----------- \n" "$(GetDate)"
 }
 # function 5 end -------------------------------------------------------------
 
@@ -171,5 +185,4 @@ function4
 function5
 
 # end:  重要，SELF日志清理需要匹配该时间--------------------------------------------
-EndDate=$(date +"%Y-%m-%dT%H:%M:%S%:z")
-printf "Script end at %s @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n" "$EndDate"
+printf "Script end at %s @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n" "$(GetDate)"
