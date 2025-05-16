@@ -82,13 +82,14 @@ function function2 {
     for i in ${!DATE_DIR_MAP[@]};do
         local DIR=$(echo ${DATE_DIR_MAP["$i"]} | cut -d'|' -f1)
         local Pattern=$(echo ${DATE_DIR_MAP["$i"]} | cut -d'|' -f2)
-        local Days$(echo ${DATE_DIR_MAP["$i"]} | cut -d'|' -f3)
+        local Days=$(echo ${DATE_DIR_MAP["$i"]} | cut -d'|' -f3)
+        local Helper=$(echo ${DATE_DIR_MAP["$i"]} | cut -d'|' -f4)
         if [ -d ${DIR} ];then
             local TARGET_DATE=$(date -d "$Days days ago" +"$Pattern")
             for date_dir in ${DIR}/*; do
                 if [ -d $date_dir ];then
                     # 判断文件夹名是否合规
-                    if date -d "$(basename $date_dir)" +"$Pattern" > /dev/null 2>&1;then
+                    if date -d "$(basename $date_dir)$Helper" +"$Pattern" > /dev/null 2>&1;then
                         # 文件夹日期早于目标日期则删除
                         if [[ $(echo "$(basename $date_dir) < $TARGET_DATE" | bc) -eq 1 ]];then
                             rm_file $date_dir

@@ -10,8 +10,9 @@ declare -A FILES_OF_REMOVE_BY_LINE_MAP=(
 # function2使用  删除超过X天的日期格式的目录
 # key为不重复序号，value为按|分隔的参数
 # 参数1:目录，参数2：date日期匹配pattern 参数3:保留天数
+# 参数4:辅助串，如-01，用于将2024-10补充为2024-10-01，防止date -d命令报错
 declare -A DATE_DIR_MAP=(
-    ["1"]="/home/zhyyusr/backup|%Y%m%d|180"
+    ["1"]="/home/zhyyusr/backup|%Y%m%d|180|"
 )
 
 # function3使用  按日分隔日志文件清理
